@@ -1,53 +1,29 @@
-Internet Access Control for OpenWrt
+Internet Access Control Use TC for OpenWrt
 ===================================
 
-This software is designed for OpwnWrt routers.
-It allows you to restrict the internet access for specific hosts in your LAN.
-You can block the internet access permanently or on schedule basis for any MAC address.
-The schedule contains the  time of a day and the days of the week.
-New in version 4:
-You can also issue a "ticket" for any blocked user. It gives him an extraordinary access to the internet for a given time.
+This software is forked from k-szuster/luci-access-control.
 
-The software is a Luci app extending the system's firewall, so it runs on any platform with no need to recompile.
-Tested on OpenWrt BB and CC.
-Note: due to a bug in CC, the times must be set in UTC, rather than local time.
+k-szuster/luci-access-control allalows you to  restrict the internet access for specific hosts in your LAN.It based on iptables.
 
+This software is based on tc,it limit the speed of client to deny the access to net work.Schedule is based on crontab.
 After installation you'll find a new page in OpenWrt's GUI: Network/Access control.
 
 Screen shot
 -----------
-![Internet Access Control](https://github.com/k-szuster/luci-access-control/blob/master/snapshot1.png?raw=true)
+![Internet Access Control](https://github.com/funTechCn/luci-access-control/blob/master/snapshot.png?raw=true)
 
-Source repository
------------------
-https://github.com/k-szuster/luci-access-control
-
-See also: https://github.com/k-szuster/luci-access-control-package
-for a standalone-package version of the same software.
-
-To install prebuilt package
-----------------------------
-Visit: https://github.com/k-szuster/luci-access-control/releases
-
-Download ipk file to your device and install it with opkg.
-
-Reboot.
 
 To build the package OpenWrt 
 -----------------------------------
 The package works on any target (it is architecture independent).
-May be built on OpenWrt-CC or later.
-The source files for BB and CC is placed in "master" branch. The DD (17) version - in separate branch: https://github.com/k-szuster/luci-access-control/tree/OpenWrt/Lede-17.
 
-- Place folder luci-access-control into your 
-
-	<openwrt>/feeds/luci/applications
-
-folder. 
+Add 
+src-git appAccessControl https://github.com/funTechCn/luci-access-control.git
+to "feeds.conf.default"
 
 - After this has been completed, call 
 ```
-	./scripts/feeds update luci ; ./scripts/feeds install -a luci
+	./scripts/feeds update appAccessControl ; ./scripts/feeds install -a appAccessControl
 ```
 from your openwrt folder. 
 
@@ -62,9 +38,6 @@ Here, you must include the following packages in your OpenWRT build for everythi
 - Call make to compile OpenWRT with the selected package installed.
 You'll find it in <openwrt>/bin/<target>/packages/luci/luci-app-access-control_....ipk file.
 
-- On OpenWrt-BB, after installing the ipk, you need to additionally run this command on the device:
-```
-	/etc/init.d/inetac enable
-```
 
-- Reboot.
+Note
+this package is not finished,iptable mode is uncompelete
