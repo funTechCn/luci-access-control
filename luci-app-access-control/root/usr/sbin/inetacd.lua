@@ -16,15 +16,15 @@ $Id$
 This daemon restores internet blocking rules to normal operation after their temporary suspension.
 ]]--
 
-require "uci"
-
-
+--require "uci"
+local uci = require "luci.model.uci"
+local log = require "luci.log"
 function check ()
     local x = uci.cursor()
     local tnow = os.time()
     local nexttime 
     local changed = false
-     
+    log.print("access control start check...")
     x:foreach ("firewall", "rule", 
         function(s) 
             if s.ac_enabled=='1' and s.ac_suspend then
@@ -43,12 +43,14 @@ function check ()
         end)
     if changed then
         x:commit("firewall")
-        os.execute ("/etc/init.d/firewall restart")
+    	log.print("access control changed...")
+        --os.execute ("/etc/init.d/firewall restart")
     end
     return nexttime    
 end
 
 while true do
+    log.print("access control loop...")
     local nexttime = check()
     if nexttime==nil then
         break
