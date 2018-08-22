@@ -1,4 +1,6 @@
 
 config access_control 'general'
 	option enabled '1'
-
+        option tcMode '1'
+        option tc_downloadLimit '10'
+        option tc_uploadLimit '10'

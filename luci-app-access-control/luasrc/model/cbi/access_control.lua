@@ -119,18 +119,51 @@ function applyRule ()
 	local x = uci.cursor()
 	x:foreach (CONFIG_FILE_TCRULES, "rule",
 	function(s)
+--		if s.ac_enabled=='1' then
+--			if s.force_allow == '1' then
+--				os.execute ("/usr/sbin/tc.sh -t mac -c del -m "..s.src_mac.." >/dev/null 2>/dev/null")
+--			end
+--			if s.force_deny == '1' then
+--				os.execute ("/usr/sbin/tc.sh -t mac -c del -m "..s.src_mac.." >/dev/null 2>/dev/null")
+--				os.execute ("/usr/sbin/tc.sh -t mac -c add -m "..s.src_mac.." >/dev/null 2>/dev/null")
+--			end
+--			local d=s.weekdays
+--			d=get_days(d)
+--			if s.force_allow ~= '1' and s.force_deny ~= '1' and s.start_time ~= nil then
+--				add_crontab(s.start_time,d,ac_keyword,"-t mac -c add -m "..s.src_mac)
+--			end
+--			if s.force_allow ~= '1' and s.force_deny ~= '1' and s.stop_time ~= nil then
+--				add_crontab(s.stop_time,d,ac_keyword,"-t mac -c del -m "..s.src_mac)
+--			end
+--			--os.execute ("/root/share/openwrt/bin/tc.sh -t mac -c add -m "..s.src_mac.." >>/var/log/luci.output")
+--			--log.print_r(str,6)
+--		end
 		if s.ac_enabled=='1' then
+			--[[//do this in /usr/sbin/accesscontroltc.lua
+			if s.force_allow == '1' then
+			os.execute ("/usr/sbin/tc.sh -t ip -c del -i "..s.src_ip.." >/dev/null 2>/dev/null")
+			end
+			if s.force_deny == '1' then
+			os.execute ("/usr/sbin/tc.sh -t ip -c del -i "..s.src_ip.." >/dev/null 2>/dev/null")
+			os.execute ("/usr/sbin/tc.sh -t ip -c add - "..s.src_ip.." >/dev/null 2>/dev/null")
+			end
+			]]--
+			
+			--create crontab
 			local d=s.weekdays
 			d=get_days(d)
-			if s.start_time ~= nil then
-				add_crontab(s.start_time,d,ac_keyword,"-t mac -c add -m "..s.src_mac)
+			if s.force_allow ~= '1' and s.force_deny ~= '1' and s.start_time ~= nil then
+				add_crontab(s.start_time,d,ac_keyword,"-t ip -c add -i "..s.src_ip)
 			end
-			if s.stop_time ~= nil then
-				add_crontab(s.stop_time,d,ac_keyword,"-t mac -c del -m "..s.src_mac)
+			if s.force_allow ~= '1' and s.force_deny ~= '1' and s.stop_time ~= nil then
+				add_crontab(s.stop_time,d,ac_keyword,"-t ip -c del -i "..s.src_ip)
 			end
 			--os.execute ("/root/share/openwrt/bin/tc.sh -t mac -c add -m "..s.src_mac.." >>/var/log/luci.output")
 			--log.print_r(str,6)
 		end
+		--执行初始化脚本，恢复规则
+		os.execute ("/usr/sbin/accesscontroltc.lua >/dev/null 2>/dev/null")
+
 	end)
 end
 
@@ -142,10 +175,7 @@ end
 
 
 local ma = Map(CONFIG_FILE_AC, translate("Internet Access Control"),
-translate("Access Control allows you to manage Internet access for specific local hosts.<br/>\
-Each rule defines when a device should be blocked from having Internet access. The rules may be active permanently or during certain times of the day.<br/>\
-The rules may also be restricted to specific days of the week.<br/>\
-Any device that is blocked may obtain a ticket suspending the restriction for a specified time."))
+translate("Access Control allows you to manage Internet access for specific local hosts."))
 if CONFIG_FILE_AC==CONFIG_FILE_RULES then
 	mr = ma
 else
@@ -168,10 +198,10 @@ function mr.on_after_commit (self)
 	local x = uci.cursor()
 	local enable = x:get(CONFIG_FILE_AC,"general","enabled")
 	if enable == "1" then
-		os.execute ("/root/share/openwrt/bin/tc.sh -t mac -c initTc >>/var/log/luci.output")
+		--os.execute ("/usr/sbin/tc.sh -t ip -c initTc >>/var/log/luci.output")
 		applyRule()
 	else
-		os.execute ("/root/share/openwrt/bin/tc.sh -t mac -c stopBase >>/var/log/luci.output")
+		--os.execute ("/usr/sbin/tc.sh -t ip -c stopBase >>/var/log/luci.output")
 		clear_crontab(ac_keyword)
 	end
 	os.execute(CRONTABRELOAD)
@@ -203,11 +233,12 @@ translate("upload speed limit[kbps]"))
 o_upload.datatype = "uinteger"
 o_upload.default = 10
 
+--[[
 local o_ticket = s_gen:option(Value, "ticket", translate("Ticket time [min]"), 
 translate("Time granted when a ticket is issued"))
 o_ticket.datatype = "uinteger"
 o_ticket.default = 60
-
+]]--
 --=============================================================================================
 -- Rule table section
 
@@ -225,7 +256,7 @@ s_rule.defaults.dest    = "wan"
 s_rule.defaults.target  = "REJECT"
 s_rule.defaults.proto    = "0"
 s_rule.defaults.extra = "--kerneltz"
-
+s_rule.defaults.force = "0"
 -- only AC-related rules
 s_rule.filter = function (self, section)
 	return self.map:get (section, "ac_enabled") ~= nil
@@ -272,13 +303,20 @@ end
 s_rule:option(Value, "name", translate("Description"))
 
 -----------------------------------------------------------        
+--[[
 o = s_rule:option(Value, "src_mac", translate("MAC address")) 
 o.rmempty = false
 o.datatype = "macaddr"
 luci.sys.net.mac_hints(function(mac, name)
 	o:value(mac, "%s (%s)" %{ mac, name })
 end)
-
+]]--
+o = s_rule:option(Value, "src_ip", translate("ip address")) 
+o.rmempty = false
+o.datatype = "ip4addr"
+luci.sys.net.ipv4_hints(function(v4, name)
+	o:value(v4, "%s (%s)" %{ v4, name })
+end)
 -----------------------------------------------------------        
 function validate_time(self, value, section)
 	local hh, mm
@@ -459,6 +497,7 @@ function wd_write(self, section)
 end
 
 -----------------------------------------------------------        
+--[[
 o = s_rule:option(Button, "_ticket", translate("Ticket")) 
 o:depends ("ac_enabled", "1")
 
@@ -495,7 +534,17 @@ function o.write(self, section, value)
 	end
 	self.map:set(section, "ac_suspend", ac_susp)
 end
+]]--
+------------------------------------------------------
+o = s_rule:option(Flag, "force_deny", translate("Force deny"))
+--o:depends ("force_allow", "0")
+o.default = '0'
+o.rmempty  = false
 
+o = s_rule:option(Flag, "force_allow", translate("Force allow"))
+--o:depends ("force_deny", "0")
+o.default = '0'
+o.rmempty  = false
 --========================================================================================================
 
 if CONFIG_FILE_AC==CONFIG_FILE_RULES then

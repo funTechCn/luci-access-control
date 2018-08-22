@@ -18,7 +18,9 @@ To build the package OpenWrt
 The package works on any target (it is architecture independent).
 
 Add 
+```
 src-git appAccessControl https://github.com/funTechCn/luci-access-control.git
+```
 to "feeds.conf.default"
 
 - After this has been completed, call 
@@ -36,8 +38,8 @@ Here, you must include the following packages in your OpenWRT build for everythi
 	LuCI -> applications -> luci-app-access-control
 ```
 - Call make to compile OpenWRT with the selected package installed.
-You'll find it in <openwrt>/bin/<target>/packages/luci/luci-app-access-control_....ipk file.
+You'll find it in <openwrt>/bin<target>/packages/luci/luci-app-access-control_....ipk file.
 
 
-Note
+- Note
 this package is not finished,iptable mode is uncompelete

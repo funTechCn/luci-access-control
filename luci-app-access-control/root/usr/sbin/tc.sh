@@ -83,10 +83,10 @@ function initIptablesChain(){
 	ret="$(cat <<-EOF
 	#初始化iptable链
 	iptables -t mangle -N $TCPRECHAIN 
-	iptables -t mangle -A $TCPRECHAIN -j PREROUTING
+	iptables -t mangle -A PREROUTING -j $TCPRECHAIN
 	iptables -t mangle -A $TCPRECHAIN -j RETURN 
 	iptables -t mangle -N $TCPOSTCHAIN 
-	iptables -t mangle -A $TCPOSTCHAIN -j POSTROUTING
+	iptables -t mangle -A POSTROUTING -j $TCPOSTCHAIN
 	iptables -t mangle -A $TCPOSTCHAIN -j RETURN
 	EOF
 	)"
@@ -97,11 +97,11 @@ function stopIptablesChain(){
 		ret="$(cat <<-EOF
 		#删除pre链
 		iptables -t mangle -F $TCPRECHAIN 
-		iptables -t mangle -D $TCPRECHAIN -j PREROUTING
+		iptables -t mangle -D PREROUTING -j $TCPRECHAIN
 		iptables -t mangle -X $TCPRECHAIN 
 		#删除post链	
 		iptables -t mangle -F $TCPOSTCHAIN 
-		iptables -t mangle -D $TCPOSTCHAIN -j POSTOUTING
+		iptables -t mangle -D POSTOUTING -j $TCPOSTCHAIN
 		iptables -t mangle -X $TCPOSTCHAIN 
 		EOF
 		)"
@@ -175,7 +175,7 @@ function clearRule(){
 				p=$IPS;
 				while [ $p -le $IPE ]
 				do
-						ret=ret+"$(cat <<-EOF
+						ret=$ret+"$(cat <<-EOF
 						iptables -t mangle -D $TCPRECHAIN -s $INET$p -j MARK --set-mark 2$p
 						iptables -t mangle -D $TCPRECHAIN -s $INET$p -j RETURN
 						iptables -t mangle -D $TCPOSTCHAIN -d $INET$p -j MARK --set-mark 2$p
@@ -188,7 +188,14 @@ function clearRule(){
 
 		if [ $TYPE = "mac" ]
 		then
-				echo clear mac rule,todo
+			ret=$ret+"$(cat <<-EOF
+			#clear pre链
+			iptables -t mangle -F $TCPRECHAIN
+			#clear post链
+			iptables -t mangle -F $TCPOSTCHAIN
+			EOF
+			)"
+
 		fi
 		echo "${ret}"
 }
@@ -267,10 +274,12 @@ if [ $ACTION = "initTc" ]
 then
 		if [ $script -eq 1 ]
 		then
+				stopIptablesChain
 				initBase
 				initTcBase
 				initIptablesChain
 		else
+				stopIptablesChain | sh -
 				initBase | sh -
 				initTcBase | sh -
 				initIptablesChain | sh -
